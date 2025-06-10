@@ -61,6 +61,11 @@ npm install
             -   **Your Server -> Stripe API:** When your backend calls Stripe's API, these are also server-to-server and not subject to browser CORS policies.
             -   **Client-Side Stripe.js (User's Browser -> Stripe):** Stripe's own servers are already configured to accept requests from browsers running Stripe.js from any domain. Your `ALLOWED_ORIGINS` setting does not affect this.
         -   You should list the origins of your frontend applications (e.g., `http://localhost:3001` if your frontend runs on a different port during development, or `https://your-production-frontend.com`).
+    *   **Footer Links**: These variables are used to populate the links in the footer of the checkout page. They are optional; if a variable is not set, its corresponding link will not be displayed.
+        *   `NEXT_PUBLIC_PRIVACY_POLICY_URL`: URL for the Privacy Policy page.
+        *   `NEXT_PUBLIC_COOKIE_POLICY_URL`: URL for the Cookie Policy page.
+        *   `NEXT_PUBLIC_TERMS_URL`: URL for the Terms and Conditions page.
+        *   `NEXT_PUBLIC_STATE_AID_URL`: URL for the State Aid Transparency page.
 
 ### 5. Run the Development Server
 

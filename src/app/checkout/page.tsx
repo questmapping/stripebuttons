@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { getProductById, Product } from '@/lib/products';
 import { loadStripe, Stripe } from '@stripe/stripe-js';
+import Footer from '@/components/Footer';
 
 // Make sure to set this in your .env.local file
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -51,10 +52,10 @@ function CheckoutContent() {
 
     if (paymentSuccess) {
       setPageStatus('payment_success');
-      setStatusMessage('Payment successful! Your order is confirmed. You can now safely close this page.');
+      setStatusMessage('Pagamento riuscito! Il tuo ordine è confermato. Ora puoi chiudere questa pagina.');
     } else if (paymentCancelled) {
       setPageStatus('payment_cancelled');
-      setStatusMessage('Payment Cancelled. You were not charged.');
+      setStatusMessage('Pagamento annullato. Non ti è stato addebitato alcun importo.');
       if (loadedEmail && loadedProduct && sessionIdFromUrl) {
         // Attempt to log the cancellation event
         fetch('/api/log-cancellation', {
@@ -87,9 +88,9 @@ function CheckoutContent() {
         setStatusMessage(null); // Clear any previous messages
       } else {
         setPageStatus('error_loading');
-        if (!loadedEmail) setStatusMessage('Email not provided or invalid in URL.');
-        else if (!loadedProduct) setStatusMessage('Product ID not provided or invalid in URL.');
-        else setStatusMessage('There was an issue loading order details from the URL.');
+        if (!loadedEmail) setStatusMessage('Email non fornito o non valido nell\'URL.');
+        else if (!loadedProduct) setStatusMessage('ID prodotto non fornito o non valido nell\'URL.');
+        else setStatusMessage('Si è verificato un problema durante il caricamento dei dettagli dell\'ordine dall\'URL.');
       }
     }
   }, [searchParams]);
@@ -97,7 +98,7 @@ function CheckoutContent() {
   const handlePayment = async () => {
     if (!product || !email) {
       setPageStatus('error_payment');
-      setStatusMessage('Cannot proceed with payment: Missing product or email information.');
+      setStatusMessage('Impossibile procedere con il pagamento: mancano informazioni sul prodotto o sull\'email.');
       return;
     }
     setIsLoading(true);
@@ -120,20 +121,20 @@ function CheckoutContent() {
           if (stripeError) {
             console.error('Stripe redirection error:', stripeError);
             setPageStatus('error_payment');
-            setStatusMessage(stripeError.message || 'Failed to redirect to Stripe.');
+            setStatusMessage(stripeError.message || 'Reindirizzamento a Stripe non riuscito.');
           }
         } else {
           setPageStatus('error_payment');
-          setStatusMessage('Stripe.js failed to load.');
+          setStatusMessage('Caricamento di Stripe.js non riuscito.');
         }
       } else {
         setPageStatus('error_payment');
-        setStatusMessage(session.error || 'Failed to create payment session.');
+        setStatusMessage(session.error || 'Creazione della sessione di pagamento non riuscita.');
       }
     } catch (err: any) {
       console.error('Payment initiation error:', err);
       setPageStatus('error_payment');
-      setStatusMessage(err.message || 'An unexpected error occurred during payment initiation.');
+      setStatusMessage(err.message || 'Si è verificato un errore imprevisto durante l\'avvio del pagamento.');
     }
     setIsLoading(false); // Ensure loading is false if an error occurs before redirection
   };
@@ -144,65 +145,66 @@ function CheckoutContent() {
   const buttonStyle: React.CSSProperties = { display: 'inline-block', marginTop: '15px', textDecoration: 'none', padding: '10px 15px', backgroundColor: '#007bff', color: 'white', borderRadius: '5px' };
 
   if (pageStatus === 'loading' && !searchParams.get('payment_success') && !searchParams.get('payment_cancelled')) {
-    return <div style={pageStyle}><h1>Loading Order Details...</h1></div>;
+    return <div style={pageStyle}><h1>Caricamento dei dettagli dell'ordine...</h1></div>;
   }
 
   if (pageStatus === 'error_loading') {
     return (
       <div style={{ ...pageStyle, ...boxStyle, color: 'red', backgroundColor: '#ffebee' }}>
-        <h2>Error Loading Details</h2>
-        <p>{statusMessage || 'Could not load order details from URL.'}</p>
-        <a href="/admin" style={buttonStyle}>Return to Admin</a>
+        <h2>Errore nel caricamento dei dettagli</h2>
+        <p>{statusMessage || 'Impossibile caricare i dettagli dell\'ordine dall\'URL.'}</p>
+        <a href="/admin" style={buttonStyle}>Torna all'Admin</a>
       </div>
     );
   }
 
   return (
-    <div style={pageStyle}>
+    <>
+      <div style={pageStyle}>
       {(product && email) && (
         <>
-          <h1>Order Summary</h1>
+          <h1>Riepilogo Ordine</h1>
           <div style={summaryBoxStyle}>
             <p style={{color: '#333'}}><strong>Email:</strong> {email}</p>
-            <p style={{color: '#333'}}><strong>Product:</strong> {product.name}</p>
-            {sellerId && <p style={{color: '#333'}}><strong>Seller ID:</strong> {sellerId}</p>}
-            <p style={{color: '#333'}}><strong>Price:</strong> €{product.price.toFixed(2)}</p>
-            <p style={{color: '#333'}}><strong>Points to be awarded:</strong> {product.points}</p>
+            <p style={{color: '#333'}}><strong>Prodotto:</strong> {product.name}</p>
+            {sellerId && <p style={{color: '#333'}}><strong>ID Venditore:</strong> {sellerId}</p>}
+            <p style={{color: '#333'}}><strong>Prezzo:</strong> €{product.price.toFixed(2)}</p>
+            <p style={{color: '#333'}}><strong>Punti che verranno assegnati:</strong> {product.points}</p>
           </div>
         </>
       )}
 
       {pageStatus === 'payment_success' && (
         <div style={{ ...boxStyle, backgroundColor: '#e6ffed' }}>
-          <h2 style={{color: '#333'}}>Payment Status</h2>
+          <h2 style={{color: '#333'}}>Stato del Pagamento</h2>
           <p style={{color: '#333'}}>{statusMessage}</p>
-          <a href="/admin" style={buttonStyle}>Return to Admin</a>
+          <a href="/admin" style={buttonStyle}>Torna all'Admin</a>
         </div>
       )}
 
       {pageStatus === 'payment_cancelled' && (
         <div style={{ ...boxStyle, backgroundColor: '#fff3e0' }}>
-          <h2 style={{color: '#333'}}>Payment Cancelled</h2>
+          <h2 style={{color: '#333'}}>Pagamento Annullato</h2>
           <p style={{color: '#333'}}>{statusMessage}</p>
-          <p style={{marginTop: '10px', color: '#333'}}>You can now safely close this page.</p>
-          <a href="/admin" style={buttonStyle}>Return to Admin</a>
+          <p style={{marginTop: '10px', color: '#333'}}>Ora puoi chiudere questa pagina in sicurezza.</p>
+          <a href="/admin" style={buttonStyle}>Torna all'Admin</a>
         </div>
       )}
       
       {pageStatus === 'error_payment' && (
          <div style={{ ...boxStyle, color: 'red', backgroundColor: '#ffebee' }}>
-            <h2 style={{color: '#333'}}>Payment Error</h2>
+            <h2 style={{color: '#333'}}>Errore di Pagamento</h2>
             <p style={{color: '#333'}}>{statusMessage}</p>
             {(product && email) && 
-              <button onClick={() => { setPageStatus('ready_to_pay'); setStatusMessage(null); setIsLoading(false); }} style={{...buttonStyle, backgroundColor: '#ffc107', color: '#333', marginRight: '10px' }}>Try Payment Again</button>
+              <button onClick={() => { setPageStatus('ready_to_pay'); setStatusMessage(null); setIsLoading(false); }} style={{...buttonStyle, backgroundColor: '#ffc107', color: '#333', marginRight: '10px' }}>Riprova il Pagamento</button>
             }
-            <a href="/admin" style={buttonStyle}>Return to Admin</a>
+            <a href="/admin" style={buttonStyle}>Torna all'Admin</a>
         </div>
       )}
 
       {pageStatus === 'ready_to_pay' && product && email && (
         <div style={boxStyle}>
-          <h2>Confirm and Pay</h2>
+          <h2>Conferma i dati e procedi al pagamento</h2>
           <button 
             onClick={handlePayment}
             disabled={isLoading}
@@ -218,11 +220,13 @@ function CheckoutContent() {
               marginTop: '10px'
             }}
           >
-            {isLoading ? 'Processing...' : `Proceed to Pay €${product.price.toFixed(2)}`}
+            {isLoading ? 'Calcolando...' : `Procedi al Pagamento di €${product.price.toFixed(2)}`}
           </button>
         </div>
       )}
     </div>
+    <Footer />
+    </>
   );
 }
 

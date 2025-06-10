@@ -41,6 +41,11 @@ export default function AdminPage() {
   const [userPoints, setUserPoints] = useState<UserPoints | null>(null);
   const [userEvents, setUserEvents] = useState<PurchaseEvent[]>([]);
   
+  const [sellerLookupId, setSellerLookupId] = useState('');
+  const [sellerLookupMonthYear, setSellerLookupMonthYear] = useState('');
+  const [sellerEvents, setSellerEvents] = useState<PurchaseEvent[]>([]);
+  const [sellerTotalVolume, setSellerTotalVolume] = useState<number>(0);
+  
   const [loading, setLoading] = useState<Record<string, boolean>>({}); // e.g. { initDb: true, allEvents: false }
   const [messages, setMessages] = useState<Record<string, string | null>>({}); // For success/error messages
   const [isLogoutLoading, setIsLogoutLoading] = useState(false);
@@ -100,6 +105,32 @@ export default function AdminPage() {
     if (data) {
       setAllEvents(data as PurchaseEvent[]);
       setMessages(prev => ({ ...prev, allEvents: 'Fetched all events.' }));
+    }
+  };
+
+  const handleSellerSearch = async () => {
+    if (!sellerLookupId.trim()) {
+      setMessages(prev => ({ ...prev, sellerSearch: 'Please enter a Seller ID to search.' }));
+      return;
+    }
+    setSellerEvents([]);
+    setSellerTotalVolume(0);
+
+    let endpoint = `/api/admin/events/seller?sellerId=${encodeURIComponent(sellerLookupId)}`;
+    if (sellerLookupMonthYear.trim()) {
+      // Basic validation for YYYY-MM format
+      if (!/^\d{4}-\d{2}$/.test(sellerLookupMonthYear.trim())) {
+        setMessages(prev => ({ ...prev, sellerSearch: 'Invalid date format. Please use YYYY-MM.' }));
+        return;
+      }
+      endpoint += `&monthYear=${encodeURIComponent(sellerLookupMonthYear.trim())}`;
+    }
+
+    const data = await makeAdminApiRequest(endpoint);
+    if (data) {
+      setSellerEvents(data.events as PurchaseEvent[]);
+      setSellerTotalVolume(data.totalVolume || 0);
+      setMessages(prev => ({ ...prev, sellerSearch: `Search complete for Seller ID: ${sellerLookupId}.` }));
     }
   };
 
@@ -239,9 +270,47 @@ export default function AdminPage() {
         {messages['/api/admin/init-db'] && <p style={{color: messages['/api/admin/init-db']?.includes('Failed') ? 'red' : 'green'}}>{messages['/api/admin/init-db']}</p>}
       </div>
 
-      {/* User Data Search Section */}
+      {/* Seller Data Lookup Section */}
+      <div style={sectionStyle}>
+        <h2 style={{ color: '#333' }}>Seller Data Lookup</h2>
+        <p style={{ color: '#666', fontSize: '0.9em', marginTop: '-10px', marginBottom: '15px' }}>
+          Filter successful payment events by Seller ID and optionally by month.
+        </p>
+        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <input
+            type="number"
+            value={sellerLookupId}
+            onChange={(e) => setSellerLookupId(e.target.value)}
+            placeholder="Enter Seller ID"
+            style={{...inputStyle, flexGrow: 1}}
+          />
+          <input
+            type="text"
+            value={sellerLookupMonthYear}
+            onChange={(e) => setSellerLookupMonthYear(e.target.value)}
+            placeholder="YYYY-MM (Optional)"
+            style={{...inputStyle, flexGrow: 1}}
+          />
+          <button onClick={handleSellerSearch} disabled={loading['/api/admin/events/seller']} style={buttonStyle}>
+            {loading['/api/admin/events/seller'] ? 'Searching...' : 'Search Seller'}
+          </button>
+        </div>
+        {messages.sellerSearch && <p style={{ color: messages.sellerSearch.startsWith('Invalid') ? 'red' : '#666', fontStyle: 'italic' }}>{messages.sellerSearch}</p>}
+        
+        {sellerEvents.length > 0 && (
+          <div>
+            <h3 style={{ color: '#333' }}>Total Volume for this period: €{Number(sellerTotalVolume).toFixed(2)}</h3>
+            {renderTable(sellerEvents)}
+          </div>
+        )}
+      </div>
+
+      {/* User Data Lookup Section */}
       <div style={sectionStyle}>
         <h2 style={{ color: '#333' }}>User Data Lookup</h2>
+        <p style={{ color: '#666', fontSize: '0.9em', marginTop: '-10px', marginBottom: '15px' }}>
+          Filter User activities by user email.
+        </p>
         <input 
           type="email" 
           value={searchedUserEmail} 
