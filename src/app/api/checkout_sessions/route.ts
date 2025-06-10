@@ -59,7 +59,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { email, productId } = await req.json();
+    const { email, productId, sellerId } = await req.json();
 
     if (!email || !productId) {
       return NextResponse.json({ error: 'Email and Product ID are required' }, { status: 400 });
@@ -90,15 +90,16 @@ export async function POST(req: NextRequest) {
       ],
       mode: 'payment',
       // Pass email and productId in success_url to repopulate checkout page if needed for display, though session_id is primary for verification
-      success_url: `${appUrl}/checkout?payment_success=true&session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(email)}&productId=${productId}`,
+      success_url: `${appUrl}/checkout?payment_success=true&session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(email)}&productId=${productId}&sellerId=${sellerId || ''}`,
       // Pass email and productId to cancel_url to allow user to easily retry or see what was cancelled
-      cancel_url: `${appUrl}/checkout?payment_cancelled=true&email=${encodeURIComponent(email)}&productId=${productId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/checkout?payment_cancelled=true&email=${encodeURIComponent(email)}&productId=${productId}&session_id={CHECKOUT_SESSION_ID}&sellerId=${sellerId || ''}`,
       customer_email: email, // Pre-fills email on Stripe's page
       metadata: {
         // Store email, productId, and points in metadata for webhook processing
         email: email,
         productId: productId,
         points: product.points.toString(), // Stripe metadata values must be strings
+        sellerId: sellerId || '0', // Store sellerId, default to '0' if not provided
       },
     });
 

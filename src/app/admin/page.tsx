@@ -12,6 +12,7 @@ interface PurchaseEvent {
   product_id?: string;
   stripe_session_id?: string;
   status: string;
+  seller_id?: number;
   points_awarded?: number;
   details?: any;
 }
@@ -32,6 +33,7 @@ const IS_ADMIN_AUTH_ENABLED = process.env.NEXT_PUBLIC_ADMIN_AUTH_ENABLED === 'tr
 
 export default function AdminPage() {
   const [purchaseEmail, setPurchaseEmail] = useState('');
+  const [sellerId, setSellerId] = useState('');
   const router = useRouter();
 
   const [allEvents, setAllEvents] = useState<PurchaseEvent[]>([]);
@@ -124,6 +126,11 @@ export default function AdminPage() {
   }, []);
 
   const handlePurchaseRequest = (productId: string) => {
+    const sellerIdNumber = parseInt(sellerId, 10);
+    if (sellerId.trim() !== '' && (isNaN(sellerIdNumber) || sellerIdNumber < 0)) {
+        alert('Please enter a valid, non-negative integer for the Seller ID.');
+        return;
+    }
     if (!purchaseEmail.trim()) {
       alert('Please enter a user email for the purchase.');
       return;
@@ -132,7 +139,7 @@ export default function AdminPage() {
       alert('Please enter a valid email address.');
       return;
     }
-    router.push(`/checkout?email=${encodeURIComponent(purchaseEmail)}&productId=${productId}`);
+    router.push(`/checkout?email=${encodeURIComponent(purchaseEmail)}&productId=${productId}&sellerId=${sellerId.trim()}`);
   };
 
   const renderTable = (data: PurchaseEvent[]) => {
@@ -141,7 +148,7 @@ export default function AdminPage() {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
         <thead>
           <tr>
-            {['ID', 'Timestamp', 'Email', 'Product ID', 'Stripe ID', 'Status', 'Points', 'Details'].map(h => <th key={h} style={tableHeaderStyle}>{h}</th>)}
+            {['ID', 'Timestamp', 'Email', 'Product ID', 'Seller ID', 'Stripe ID', 'Status', 'Points', 'Details'].map(h => <th key={h} style={tableHeaderStyle}>{h}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -151,6 +158,7 @@ export default function AdminPage() {
               <td style={tableCellStyle}>{new Date(event.timestamp).toLocaleString()}</td>
               <td style={tableCellStyle}>{event.email}</td>
               <td style={tableCellStyle}>{event.product_id || 'N/A'}</td>
+              <td style={tableCellStyle}>{event.seller_id !== null ? event.seller_id : 'N/A'}</td>
               <td style={tableCellStyle}>{event.stripe_session_id || 'N/A'}</td>
               <td style={tableCellStyle}>{event.status}</td>
               <td style={tableCellStyle}>{event.points_awarded !== null ? event.points_awarded : 'N/A'}</td>
@@ -194,6 +202,17 @@ export default function AdminPage() {
             value={purchaseEmail}
             onChange={(e) => setPurchaseEmail(e.target.value)}
             placeholder="user@example.com"
+            style={inputStyle}
+          />
+        </div>
+        <div style={{ marginBottom: '20px' }}>
+          <label htmlFor="sellerId" style={{ display: 'block', marginBottom: '5px', color: '#333' }}>Seller ID (Optional):</label>
+          <input
+            type="number"
+            id="sellerId"
+            value={sellerId}
+            onChange={(e) => setSellerId(e.target.value)}
+            placeholder="e.g., 12345"
             style={inputStyle}
           />
         </div>

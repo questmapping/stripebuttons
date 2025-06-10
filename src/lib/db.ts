@@ -27,7 +27,8 @@ export async function initializeDbSchema() {
       email VARCHAR(255) NOT NULL,
       product_id VARCHAR(100),
       stripe_session_id VARCHAR(255) UNIQUE,
-      status VARCHAR(50) NOT NULL, -- e.g., 'INITIATED', 'SUCCESS', 'FAILED', 'CANCELLED', 'POINTS_UPDATED', 'POINTS_UPDATE_FAILED'
+      status VARCHAR(50) NOT NULL, -- e.g., 'INITIATED', 'SUCCESS', 'FAILED', 'CANCELLED', 'POINTS_UPDATED', 'POINTS_UPDATE_FAILED',
+      seller_id INTEGER NOT NULL DEFAULT 0,
       points_awarded INTEGER,
       details JSONB
     );
@@ -49,6 +50,11 @@ export async function initializeDbSchema() {
   try {
     await sql(createPurchaseEventsTable);
     console.log('Checked/created purchase_events table.');
+
+    // Add seller_id column if it doesn't exist, to support migration from older schema.
+    const addSellerIdColumn = `ALTER TABLE purchase_events ADD COLUMN IF NOT EXISTS seller_id INTEGER NOT NULL DEFAULT 0;`;
+    await sql(addSellerIdColumn);
+    console.log('Ensured seller_id column exists in purchase_events table.');
 
     await sql(createUserPointsTable);
     console.log('Checked/created user_points table.');

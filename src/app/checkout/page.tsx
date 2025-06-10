@@ -11,6 +11,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState<string | null>(null);
+  const [sellerId, setSellerId] = useState<string | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [pageStatus, setPageStatus] = useState<
     'loading' | 'ready_to_pay' | 'payment_success' | 'payment_cancelled' | 'error_loading' | 'error_payment'
@@ -25,6 +26,7 @@ function CheckoutContent() {
     const sessionIdFromUrl = searchParams.get('session_id'); // For success message or future cancellation logging
     const emailParam = searchParams.get('email');
     const productIdParam = searchParams.get('productId');
+    const sellerIdParam = searchParams.get('sellerId');
 
     let loadedEmail: string | null = null;
     let loadedProduct: Product | null = null;
@@ -39,6 +41,10 @@ function CheckoutContent() {
         loadedProduct = p;
         setProduct(p);
       }
+    }
+
+    if (sellerIdParam) {
+      setSellerId(sellerIdParam);
     }
 
     if (sessionIdFromUrl) setStripeSessionIdForCancelLog(sessionIdFromUrl); // Store for potential cancel log
@@ -102,7 +108,7 @@ function CheckoutContent() {
       const response = await fetch('/api/checkout_sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, productId: product.id }),
+        body: JSON.stringify({ email, productId: product.id, sellerId }),
       });
 
       const session = await response.json();
@@ -159,6 +165,7 @@ function CheckoutContent() {
           <div style={summaryBoxStyle}>
             <p style={{color: '#333'}}><strong>Email:</strong> {email}</p>
             <p style={{color: '#333'}}><strong>Product:</strong> {product.name}</p>
+            {sellerId && <p style={{color: '#333'}}><strong>Seller ID:</strong> {sellerId}</p>}
             <p style={{color: '#333'}}><strong>Price:</strong> €{product.price.toFixed(2)}</p>
             <p style={{color: '#333'}}><strong>Points to be awarded:</strong> {product.points}</p>
           </div>

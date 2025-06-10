@@ -15,6 +15,7 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 async function recordPurchaseEvent(data: {
   email: string;
   productId?: string;
+  seller_id?: number;
   stripeSessionId: string;
   status: string;
   pointsAwarded?: number;
@@ -22,12 +23,13 @@ async function recordPurchaseEvent(data: {
 }) {
   try {
     await sql(
-      `INSERT INTO purchase_events (email, product_id, stripe_session_id, status, points_awarded, details)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (stripe_session_id) DO UPDATE SET status = EXCLUDED.status, details = EXCLUDED.details, product_id = EXCLUDED.product_id, points_awarded = EXCLUDED.points_awarded;`,
+      `INSERT INTO purchase_events (email, product_id, seller_id, stripe_session_id, status, points_awarded, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (stripe_session_id) DO UPDATE SET status = EXCLUDED.status, details = EXCLUDED.details, product_id = EXCLUDED.product_id, seller_id = EXCLUDED.seller_id, points_awarded = EXCLUDED.points_awarded;`,
       [
         data.email,
         data.productId,
+        data.seller_id,
         data.stripeSessionId,
         data.status,
         data.pointsAwarded,
@@ -140,6 +142,7 @@ export async function POST(req: NextRequest) {
 
         const email = session.metadata?.email || session.customer_details?.email;
         const productId = session.metadata?.productId;
+        const sellerId = parseInt(session.metadata?.sellerId || '0', 10);
 
         if (!email || !productId) {
           console.error('Checkout session completed but missing email or productId in metadata.', session.id);
@@ -148,6 +151,7 @@ export async function POST(req: NextRequest) {
             stripeSessionId: session.id, 
             status: 'ERROR_MISSING_METADATA',
             productId: productId,
+            seller_id: sellerId,
             details: { error: 'Email or productId not found in session metadata' }
           });
           return NextResponse.json({ received: true, error: 'Email or productId missing in session data' });
@@ -162,6 +166,7 @@ export async function POST(req: NextRequest) {
             stripeSessionId: session.id,
             status: 'ERROR_PRODUCT_NOT_FOUND',
             productId: productId,
+            seller_id: sellerId,
             details: { error: `Product ID ${productId} not found.` }
           });
           return NextResponse.json({ received: true, error: `Product ID ${productId} not found.` });
@@ -173,6 +178,7 @@ export async function POST(req: NextRequest) {
         await recordPurchaseEvent({
           email,
           productId,
+          seller_id: sellerId,
           stripeSessionId: session.id,
           status: 'PAYMENT_SUCCESS',
           pointsAwarded: pointsToAward,
